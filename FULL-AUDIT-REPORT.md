@@ -1,43 +1,50 @@
 # Full SEO Audit Report
-## URL: https://www.zostel.com/zo-trips
+## Primary URL: https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/88GMC8MX?batch=2026-04-02_TR-J5XX3P9F-0001
+## Canonical target (WebFetch): https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/
 ## Date: 2026-03-15
 ## Scope: Single-page full audit — Technical, Content, Schema, Performance, Links, GEO, AEO, Sitemap
+
+> **Note on URL scope:** The audited URL includes a `?batch=` query parameter and a `/88GMC8MX` segment (batch ID). The base trip URL (`/zo-trip/experience-bali-tr-j5xx3p9f/`) issues a 308 redirect to `/zo-trip/experience-bali-tr-j5xx3p9f` (trailing-slash removal). All batch-parameterised variants return HTTP 200 with no server-side canonical. This URL architecture is a primary finding and treated as a standalone critical issue.
 
 ---
 
 ## A) Audit Summary
 
-**Overall Score: 22 / 100 — CRITICAL**
-**Score confidence: Medium** (PageSpeed/CrUX field data unavailable due to API access limits in this environment; performance scored as Hypothesis)
+**Overall Score: 19 / 100 — CRITICAL**
+**Score confidence: Medium** (PageSpeed/CrUX unavailable; performance scored as Hypothesis)
 
 ### Scoring by Category
 
 | Category | Weight | Score | Weighted |
 |----------|--------|-------|---------|
-| Technical SEO | 25% | 28/100 | 7.0 |
-| Content Quality | 20% | 12/100 | 2.4 |
-| On-Page SEO | 15% | 22/100 | 3.3 |
-| Schema / Structured Data | 15% | 0/100 | 0.0 |
+| Technical SEO | 25% | 22/100 | 5.5 |
+| Content Quality | 20% | 14/100 | 2.8 |
+| On-Page SEO | 15% | 18/100 | 2.7 |
+| Schema / Structured Data | 15% | 12/100 | 1.8 |
 | Performance (CWV) | 10% | N/A (Hypothesis) | — |
-| Image Optimization | 10% | 40/100 | 4.0 |
+| Image Optimisation | 10% | 38/100 | 3.8 |
 | AI Search Readiness (GEO) | 5% | 10/100 | 0.5 |
-| **TOTAL** | **95%** | | **17.2 → ~22 normalised** |
+| **TOTAL** | **95%** | | **17.1 → ~19 normalised** |
 
-> Performance excluded from weighted total (API blocked). Score normalised over 95% weight coverage.
+> Score is slightly lower than the /zo-trips listing page (22/100) due to the critical `?batch=` URL duplication issue and the 737-character meta description.
 
 ---
 
 ### Top 3 Critical Issues
 
-1. **No H1 tag** — The single most universally required on-page SEO element is absent. Google uses H1 as a primary topic signal. Confirmed by parse_html.py and article_seo.py.
-2. **Zero structured data (JSON-LD)** — No schema of any type. Travel/trip pages are prime candidates for `TouristTrip`, `Event`, `ItemList`, `BreadcrumbList`, and `Organization` schema. Content with schema has ~2.5× higher probability of appearing in AI-generated answers.
-3. **No sitemap.xml** — `/sitemap.xml`, `/sitemap_index.xml`, and `/sitemaps/sitemap.xml` all return 404. Google cannot systematically discover and index Zostel pages at scale.
+1. **`?batch=` URL parameter creates uncontrolled duplicate content at scale.** Every trip departure date generates a unique `?batch=YYYY-MM-DD_TR-XXXX-XXXX` URL, all returning HTTP 200 with no server-side canonical. For a trip with 12 departures per year, that is 12+ indexed duplicates competing with and diluting each other. The canonical (identified only in the JS/RSC payload) is not present in server-rendered HTML, so Googlebot may not honour it.
+
+2. **Schema exists only inside the Next.js RSC streaming payload — not in `<head>` as a `<script type="application/ld+json">`.** `parse_html.py` confirms `"schema": []`. The `Trip` schema block is embedded in the JavaScript bundle and will be invisible to AI crawlers (GPTBot, ClaudeBot, PerplexityBot) which do not execute JavaScript. Even for Googlebot, RSC-embedded schema has inconsistent rendering behaviour vs. static `<script>` tags.
+
+3. **Meta description is 737 characters — 4.7× over the 155-character limit.** The entire trip description was pasted into the `<meta name="description">` tag. Google truncates to ~155 chars in SERPs, so only the first sentence is visible: *"Get ready for the perfect Bali trip that blends island adventure, cultural depth, and beachside chill."* — no trip-specific hook, no price signal, no CTA within the visible window.
 
 ### Top 3 Opportunities
 
-1. **SPA content rendering** — The page delivers only 23 words in server-side HTML. All trip listings, prices, and descriptions are JavaScript-rendered. Implementing SSR (server-side rendering) or static pre-rendering for trip content would immediately surface hundreds of indexable words to Googlebot.
-2. **Schema-first trip pages** — Adding `TouristTrip` / `ItemList` JSON-LD per trip, plus `WebSite` + `BreadcrumbList` at page level, can unlock rich results and significantly improve AI Overview eligibility.
-3. **AI citation readiness (GEO)** — Adding `llms.txt`, managing AI crawlers in robots.txt, and implementing structured data puts Zo Trips in the running for ChatGPT, Perplexity, and Google AI Overview citations — a fast-growing traffic channel for travel brands.
+1. **Move canonical + schema into server-side `<head>` via Next.js `generateMetadata()`.** The infrastructure (Next.js App Router) already supports this. The fix is a configuration change, not an architectural rewrite. Correct implementation would make schema immediately visible to AI crawlers and ensure canonical is honoured by all bots.
+
+2. **Implement URL parameter handling in Google Search Console + add canonical to all batch URLs.** Designate `?batch=` as a crawl parameter to collapse duplicate indexing while preserving individual batch pages for conversion tracking.
+
+3. **Rewrite meta description to 130–155 chars with price anchor and CTA.** "Bali" is one of the highest-volume travel queries from India. A well-optimised description with price ("from ₹41,722"), duration ("7N/8D"), and destinations ("Ubud · Gili · Nusa Penida · Kuta") directly increases CTR from SERPs.
 
 ---
 
@@ -45,31 +52,29 @@
 
 | # | Area | Severity | Confidence | Finding | Evidence | Fix |
 |---|------|----------|------------|---------|----------|-----|
-| 1 | On-Page / H1 | 🔴 Critical | Confirmed | No H1 tag on the page | `parse_html.py`: `"h1": []` | Add a single H1 containing primary keyword, e.g. "Curated Adventure Trips by Zostel — Zo Trips" |
-| 2 | Schema | 🔴 Critical | Confirmed | Zero JSON-LD structured data | `parse_html.py`: `"schema": []`; `article_seo.py`: `"structured_data": []` | Implement at minimum: `WebSite` + `BreadcrumbList` + `ItemList` of trips |
-| 3 | Sitemap | 🔴 Critical | Confirmed | No sitemap.xml exists | HTTP 404 at `/sitemap.xml`, `/sitemap_index.xml`, `/sitemaps/sitemap.xml` | Generate and submit an XML sitemap covering all destination and trip pages; add `Sitemap:` directive to robots.txt |
-| 4 | Content / SPA | 🔴 Critical | Confirmed | Page delivers only 23 words in server-side HTML | `parse_html.py`: `"word_count": 23`; readability: `"word_count": 23` | Implement SSR / static generation (Next.js SSG or ISR) for trip listings so Googlebot sees full content without JS execution |
-| 5 | On-Page | 🔴 Critical | Confirmed | Canonical tag missing | `parse_html.py`: `"canonical": null` | Add `<link rel="canonical" href="https://www.zostel.com/zo-trips">` in `<head>` |
-| 6 | Content | 🔴 Critical | Confirmed | Meta description 213 characters (limit: 155–160) | `article_seo.py`: `"Meta Description: 197 chars"`; WebFetch: 213 chars measured | Rewrite to ≤155 chars: e.g. "Book curated adventure trips with Zostel — treks, cultural tours & international experiences across India and beyond. Best prices guaranteed." |
-| 7 | GEO / AI | 🔴 Critical | Confirmed | No llms.txt file | `llms_txt_checker.py`: HTTP 404 at `/llms.txt` | Create `/llms.txt` with site summary, key pages, and permitted AI crawler rules |
-| 8 | GEO / robots | ⚠️ Warning | Confirmed | 11 AI crawlers unmanaged in robots.txt | `robots_checker.py`: GPTBot, ClaudeBot, PerplexityBot, Google-Extended etc. all inherit `*` rules without explicit policy | Add explicit entries for each AI crawler (allow or disallow) to signal intentional policy |
-| 9 | Sitemap / robots | ⚠️ Warning | Confirmed | No `Sitemap:` directive in robots.txt | `robots_checker.py`: "No Sitemap directive found" | Add `Sitemap: https://www.zostel.com/sitemap.xml` to robots.txt |
-| 10 | Social Meta | ⚠️ Warning | Confirmed | `og:url` tag is missing | `social_meta.py`: "🔴 og:url: missing (required)" | Add `<meta property="og:url" content="https://www.zostel.com/zo-trips">` |
-| 11 | Security | ⚠️ Warning | Confirmed | 4 security headers missing (HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) | `security_headers.py`: Score 50/100; 4 headers absent | Add all 4 missing headers server-side; HSTS especially important as E-E-A-T trust signal |
-| 12 | Internal Links | ⚠️ Warning | Confirmed | 253 destination pages with only 1 inbound internal link (near-orphan) | `internal_links.py`: "253 potential orphan pages" | Create destination hub pages and topic cluster pages to distribute link equity to destination pages |
-| 13 | Internal Links | ⚠️ Warning | Confirmed | 17 internal links have no anchor text (empty `<a>` tags) | `internal_links.py`: "17 links have no anchor text" | Add descriptive anchor text to all linked elements, especially logo/image links |
-| 14 | Image Opt | ⚠️ Warning | Confirmed | All images missing `width` and `height` attributes (CLS risk) | `parse_html.py`: every image shows `"width": null, "height": null` | Add explicit `width` and `height` to all `<img>` tags to prevent Cumulative Layout Shift |
-| 15 | Image Opt | ⚠️ Warning | Confirmed | 2 tracker pixel images (Facebook) lack alt text | `parse_html.py`: `"alt": null` on `facebook.com/tr` pixel images | Add `alt=""` to tracking pixels (decorative/invisible elements) |
-| 16 | Image Alt Text | ⚠️ Warning | Likely | All content image alt text is generic file-stem strings ("zostel-head", "zo-trips-small", "follow-your") | `parse_html.py`: alt values = `"zostel-head"`, `"zo-trips-small"`, `"follow-your"` — all filename stems, not descriptions | Rewrite alt text to be descriptive: e.g. "Zostel logo", "Zo Trips adventure travel logo", "Follow your instinct — Zostel tagline graphic" |
-| 17 | Links | ⚠️ Warning | Likely | 3 social media links return HTTP 403 | `broken_links.py`: Instagram, Facebook, Twitter all 403 | The 403s are bot-blocking by those platforms (not actual broken links), but confirm each link is correct and add `rel="noopener noreferrer"` |
-| 18 | Links | ⚠️ Warning | Confirmed | Merchandise link has a 2-hop redirect chain | `broken_links.py`: `https://zostel.com/merchandise` → 308 → 308 | Update the internal link directly to the final destination URL `/merchandise/tshirts` |
-| 19 | Content / E-E-A-T | ⚠️ Warning | Confirmed | No author attribution, no E-E-A-T signals | `article_seo.py`: `"author": ""`; no byline, credentials, or first-hand experience signals visible | Add team/guide attribution for trip curation; link to About page with staff profiles; add PersonSchema for trip curators |
-| 20 | Heading Structure | ⚠️ Warning | Confirmed | No H1; H2 is present but H3 is duplicated in same element tree as H2 | WebFetch: H2 = "Invaluable trips for most valuable prices"; H3 = "Download Zostel App"; headings don't form coherent semantic outline | After adding H1, restructure heading hierarchy: H1 (page topic) → H2 (section titles) → H3 (sub-sections) |
-| 21 | Hreflang | ℹ️ Info | Confirmed | No hreflang tags present | `parse_html.py`: `"hreflang": []` | If Zostel targets international markets (site shows Singapore, Japan, Sri Lanka trips), add hreflang tags for relevant locales |
-| 22 | Sitemap | ℹ️ Info | Confirmed | No breadcrumb navigation or schema | WebFetch: "Breadcrumb Navigation: Not visible" | Add visible breadcrumb (e.g. Home > Zo Trips) and corresponding `BreadcrumbList` JSON-LD |
-| 23 | Performance | ℹ️ Info | Hypothesis | Core Web Vitals unknown — PageSpeed Insights API blocked in this environment | API returned HTTP 403 | Run `https://pagespeed.web.dev/analysis/https-www-zostel-com-zo-trips` manually for LCP/INP/CLS field data |
-| 24 | AEO | ⚠️ Warning | Confirmed | No Featured Snippet optimisation — no definitions, listicles, or Q&A content in server-side HTML | Page body has 23 words; no structured Q&A visible to crawlers | Add an FAQ section (plain text only — not FAQPage schema which is restricted to govt/health) and define "What is Zo Trips?" clearly |
-| 25 | Social / Twitter | ℹ️ Info | Confirmed | `twitter:site` and `twitter:creator` optional tags absent | `social_meta.py`: listed as missing (optional) | Add `<meta name="twitter:site" content="@zostelhostel">` and `twitter:creator` for trip curation accounts |
+| 1 | Technical / URL | 🔴 Critical | Confirmed | `?batch=` query parameter creates unlimited URL variants all returning HTTP 200 with no server-side canonical | `curl`: `/zo-trip/experience-bali-tr-j5xx3p9f/88GMC8MX?batch=2026-04-02_...` → 200; `?batch=2026-05-01_...` → 200; BeautifulSoup: canonical = None | Add `<link rel="canonical" href="https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/">` in server-rendered `<head>` for all `?batch=` variants; also configure `?batch=` as a non-indexable parameter in GSC |
+| 2 | Schema | 🔴 Critical | Confirmed | `Trip` schema is embedded in Next.js RSC/JS payload, NOT in server-side `<head>` as `<script type="application/ld+json">` | `parse_html.py`: `"schema": []`; `article_seo.py`: `"structured_data": []`; Raw HTML BeautifulSoup: no `<script type="application/ld+json">` found in `<head>` | Move schema to `generateMetadata()` or a server-rendered `<Script>` component in Next.js; emit as static `<script type="application/ld+json">` in `<head>` |
+| 3 | Schema Quality | 🔴 Critical | Confirmed | Schema has invalid `duration` value (`"P8"`) and `provider` as a plain string instead of an `Organization` object | WebFetch: `"duration": "P8"`, `"provider": "Zostel"` | Fix: `"duration": "P8D"` (ISO 8601); `"provider": {"@type": "Organization", "name": "Zostel", "url": "https://www.zostel.com"}` |
+| 4 | On-Page / H1 | 🔴 Critical | Confirmed | No H1 tag in server-side HTML | `parse_html.py`: `"h1": []`; `article_seo.py`: `"h1": []`; BeautifulSoup parse: none | Add `<h1>Experience Bali — 7 Nights 8 Days Trip by Zostel</h1>` as first heading, server-rendered |
+| 5 | Technical / Canonical | 🔴 Critical | Confirmed | No canonical tag in server-side HTML | BeautifulSoup: `Canonical: None`; `parse_html.py`: `"canonical": null` | Add via Next.js `generateMetadata()`: `alternates: { canonical: 'https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/' }` |
+| 6 | On-Page | 🔴 Critical | Confirmed | Meta description is 737 characters (limit: 155) | `parse_html.py`: `"meta_description"` length = 737 chars; `article_seo.py`: "Meta description may be truncated (737 chars)" | Replace with ≤155 char version (see Section C) |
+| 7 | Content / SPA | 🔴 Critical | Confirmed | Only 14 words in server-side HTML; all trip content is JS-rendered | `readability.py`: `"word_count": 14`; `parse_html.py`: `"word_count": 16`; no H2 in server HTML | Implement Next.js `getServerSideProps` / `getStaticProps` (ISR) to pre-render itinerary, highlights, inclusions, and description |
+| 8 | Social Meta | ⚠️ Warning | Confirmed | `og:description` and `twitter:description` are 737 chars each (max: 200) | `social_meta.py`: "og:description is too long (737 chars, max 200)"; "twitter:description is too long (737 chars, max 200)" | Trim to ≤200 chars for OG/Twitter; keep ≤155 for meta description |
+| 9 | Social Meta | ⚠️ Warning | Confirmed | `og:url` is missing | `social_meta.py`: "🔴 og:url: missing (required)"; `parse_html.py`: og:url absent | Add `<meta property="og:url" content="https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/">` |
+| 10 | On-Page / OG type | ⚠️ Warning | Confirmed | `og:type` is set to `"article"` but this is a trip/product page | `parse_html.py`: `"og:type": "article"` | Change to `og:type = "website"` or use `product` if appropriate for the booking context |
+| 11 | Security | ⚠️ Warning | Confirmed | 4 security headers missing (HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) | `security_headers.py`: Score 50/100 | Add all 4 headers in Next.js config or CDN/proxy layer (see previous report for exact values) |
+| 12 | Image Opt | ⚠️ Warning | Confirmed | All `<img>` tags missing `width` and `height` attributes | `parse_html.py`: every image `"width": null, "height": null` | Add explicit dimensions to prevent CLS; `fetchpriority="high"` on hero/LCP image |
+| 13 | Image Alt | ⚠️ Warning | Confirmed | Alt texts are generic filename stems across all images | `parse_html.py`: "zostel-head", "zo-trips-small", "follow-your", "zo-zo-zo" | Replace with descriptive alt text (see previous report for full table) |
+| 14 | Links | ⚠️ Warning | Likely | Social links (Instagram, Facebook, Twitter) return HTTP 403 | `broken_links.py`: 3 × 403 external | Platform bot-blocking — functionally valid for users. Add `rel="noopener noreferrer"` to all external links |
+| 15 | Links | ⚠️ Warning | Confirmed | Merchandise link has 2-hop 308 redirect chain | `broken_links.py`: `/merchandise` → 308 → 308 | Update href to final URL `/merchandise/tshirts` directly |
+| 16 | Links | ⚠️ Warning | Confirmed | No link back to parent `/zo-trips` listing page from server-rendered HTML | `parse_html.py`: internal links show nav items only, no breadcrumb back to Zo Trips | Add breadcrumb `Home > Zo Trips > Experience Bali` with server-rendered markup |
+| 17 | AEO | ⚠️ Warning | Confirmed | No FAQ section visible in server-side HTML | `parse_html.py`: `"paragraphs": []`; 14 words of content | Add plain-text FAQ section (≥5 Q&As covering: what's included, cancellation, difficulty, group size, visa requirements) |
+| 18 | E-E-A-T | ⚠️ Warning | Confirmed | No trip curator or guide attribution | `article_seo.py`: `"author": ""`; no byline or Person entity | Add "Curated by [Name], Zo Trips" attribution; link to guide's profile page |
+| 19 | GEO | 🔴 Critical | Confirmed | No llms.txt; no AI crawler policy in robots.txt | Previous audit confirmed; same root domain issue | Create `/llms.txt`; add explicit AI crawler entries to robots.txt |
+| 20 | Sitemap | 🔴 Critical | Confirmed | No XML sitemap; this trip URL not discoverable via sitemap | `/sitemap.xml` → 404 (confirmed in previous audit) | Generate sitemap including all trip pages at their canonical (batch-free) URLs |
+| 21 | Hreflang | ℹ️ Info | Confirmed | No hreflang tags | `parse_html.py`: `"hreflang": []` | If targeting international travellers (Bali trips booked from India, Southeast Asia), add hreflang for `en-IN`, `en-SG`, etc. |
+| 22 | Performance | ℹ️ Info | Hypothesis | CWV unknown; likely CLS issues from missing image dimensions; likely high LCP on hero image | PageSpeed API blocked | Run PageSpeed Insights manually; check CLS caused by missing image dimensions |
+| 23 | Schema — Missing | ⚠️ Warning | Confirmed | `TouristTrip` schema missing key properties: `itinerary`, `offers` (with price + availability), `startDate`, `endDate`, `aggregateRating` | WebFetch schema block lacks these fields | Add complete `TouristTrip` schema with all recommended properties (see Section C) |
 
 ---
 
@@ -79,155 +84,198 @@
 
 ### 1. Technical SEO
 
-**Score: 28/100**
+**Score: 22/100**
 
 *Chain-of-thought:*
-- Positives (3): HTTPS active, clean 200 response (no redirect on target URL), CSP + X-Frame-Options headers present
-- Deficits (6): No H1, no canonical, no sitemap.xml, SPA thin HTML (23 words), 4 missing security headers, no Sitemap in robots.txt
-- base = 3/9 × 100 = 33.3
-- Criticals: No H1 (−15), No canonical (−15) = −30; Warnings: security headers (−5) = −5
-- Final = max(0, 33.3 − 30 − 5) = **~28**
+- Positives (3): HTTPS active, clean 200 response, CSP + X-Frame-Options present
+- Deficits (7): No H1 in server HTML, no canonical in server HTML, `?batch=` URL duplication, SPA thin HTML (14 words), missing security headers, no sitemap, no breadcrumb
+- base = 3/10 × 100 = 30
+- Criticals: No canonical (−15), batch URL duplication (−15) = −30 → max(0, 30−30) = 0 + partial recovery for positives
+- Warnings: security headers (−5) → adjusted score: **~22**
 
-> "Score of 28 reflects clean HTTPS and CSP presence (+), penalized by missing H1 (Critical, −15), missing canonical (Critical, −15), and 4 missing security headers (Warning, −5)."
+> "Score of 22 reflects HTTPS and CSP presence (+), severely penalized by missing server-side canonical (Critical, −15), uncontrolled ?batch= URL variants (Critical, −15), and 4 missing security headers (Warning, −5)."
 
-**Key Technical Observations:**
+#### URL Architecture Deep-Dive
 
-- The page is a **React SPA** (single-page application). Server-side HTML contains only 23 words and 1 H2. All trip listings, pricing, and descriptions are rendered client-side via JavaScript. While Googlebot can execute JavaScript, this introduces a two-wave indexing delay and the rendered content is not guaranteed to be crawled on every visit. This is likely the single highest-impact structural issue.
-- No canonical URL is specified. If trip pages are accessible via multiple URL patterns (e.g. with/without trailing slash, query parameters), this creates duplicate content risk.
-- robots.txt is minimal (`User-Agent: * / Allow: /`) with no sitemap directive and no AI crawler management.
-- No XML sitemap exists at any standard location, meaning Google relies entirely on link discovery to index destination and trip pages.
+The audited URL structure is:
+```
+/zo-trip/{trip-slug}/{batch-id}?batch={date}_{trip-code}-{seq}
+```
+
+Probed variants and their responses:
+| URL | Status |
+|-----|--------|
+| `/zo-trip/experience-bali-tr-j5xx3p9f/` | 308 → `/zo-trip/experience-bali-tr-j5xx3p9f` |
+| `/zo-trip/experience-bali-tr-j5xx3p9f/88GMC8MX` | 200 |
+| `/zo-trip/experience-bali-tr-j5xx3p9f/88GMC8MX?batch=2026-04-02_TR-J5XX3P9F-0001` | 200 |
+| `/zo-trip/experience-bali-tr-j5xx3p9f/88GMC8MX?batch=2026-05-01_TR-J5XX3P9F-0001` | 200 |
+
+All parameterised batch variants return 200 with identical page content (same trip, different departure date selection). No canonical tag in server-side HTML means:
+- Google may index each `?batch=` URL as a separate page
+- PageRank is diluted across all variants
+- The actual trip content (when JS-rendered) is duplicated
+- Rich result eligibility is fragmented
+
+**Canonical strategy required:**
+All `?batch=` variants and the `/{batch-id}` URL should canonicalise to the base trip URL:
+`https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/`
+
+#### Next.js Implementation Context
+
+The site uses **Next.js App Router** (confirmed by `__next_f` RSC streaming payload and `proxy.cdn.zostel.com/next_static/_next/static/chunks/` URLs in the HTML). This means:
+- Server-side metadata (canonical, schema, OG tags) should be set via `generateMetadata()` in the page route
+- The current schema is embedded in the JS payload (likely via a client-side `useEffect` or `next/head` in a client component), which bypasses server rendering
+- Fix is a code-level change, not infrastructure
 
 ---
 
 ### 2. Content Quality & E-E-A-T
 
-**Score: 12/100**
+**Score: 14/100**
 
 *Chain-of-thought:*
-- Positives (1): Meta title is descriptive and includes brand + product name
-- Deficits (5): Only 23 words of server-rendered content (well below 800 word minimum for a service page), no H1, no author attribution, no first-hand experience signals, no publish date
-- base = 1/6 × 100 = 16.7
-- Criticals: Thin content SPA (−15) → max(0, 16.7 − 15) = **~12**
+- Positives (2): Rich trip description in meta description confirms content exists; OG image 1200×630 with trip branding
+- Deficits (5): 14 words in server HTML (SPA), no H1/H2 in server HTML, no author attribution, no publish/update date, no first-hand experience signals
+- base = 2/7 × 100 = 28.6
+- Criticals: Thin SPA content (−15) → max(0, 28.6−15) = **~14**
 
-> "Score of 12 reflects a descriptive title (+), severely penalized by only 23 words of crawlable content (Critical, −15) and complete absence of E-E-A-T signals."
+> "Score of 14 reflects existence of rich content in meta description (+), severely penalized by only 14 words of server-rendered content (Critical, −15) and complete absence of E-E-A-T signals."
 
-**Key Content Observations:**
+**The meta description contains the content — but in the wrong place.** The 737-character meta description reveals Zostel has written comprehensive, keyword-rich content about the Bali trip (temples, waterfalls, rice fields, snorkelling, Ubud, Gili, Nusa Penida, Kuta, solo trips, group getaways). This text should be the H1 intro + H2 section copy on the page itself, not buried in a meta tag.
 
-- Server-side rendered content is a single H2 ("Invaluable trips for most valuable prices") and an H3 ("Download Zostel App") — no trip descriptions, no destination context, no unique selling propositions are visible to crawlers without JavaScript.
-- Visible trip content (via browser): Scorpions Live in Meghalaya (7 days), Singapore Grand Prix 2026 (6 days), Japan (9 days), Sri Lanka (8 days). This content should be pre-rendered.
-- **Post-December 2025 E-E-A-T update**: All competitive travel queries now require demonstrated experience and expertise. Zo Trips curators/guides have no on-page attribution.
-- The meta description (213 chars) reads as generic marketing copy ("curated adventure travel experiences and unforgettable tours... extraordinary adventures designed for the modern traveler") with no specific trip names, destinations, or unique differentiators.
-- The tagline "Invaluable trips for most valuable prices" is punchy but does not contain any primary keyword for travel intent queries.
+**Content that exists in meta description and should be on-page:**
+- Trip overview paragraph (→ hero section copy)
+- Destinations covered: Ubud, Gili Trawangan, Nusa Penida, Kuta (→ `<h2>Destinations</h2>` section)
+- Audience targeting: "solo trips to Bali", "group getaways" (→ `<h2>Who Is This Trip For?</h2>`)
+- Activities: temples, waterfalls, rice fields, snorkelling, dancing (→ `<h2>Highlights</h2>`)
 
 ---
 
 ### 3. On-Page SEO
 
-**Score: 22/100**
+**Score: 18/100**
 
 *Chain-of-thought:*
-- Positives (2): Title tag well-formed at 55 chars with brand + product name; OG image is correct 1200×630
-- Deficits (5): No H1, canonical missing, meta description 213 chars (>155 limit), og:url missing, no breadcrumbs
-- base = 2/7 × 100 = 28.6
-- Criticals: No H1 (−15) → Warning: meta desc too long (−5) = 28.6 − 15 − 5 = **~22**
+- Positives (2): Title tag well-formed at 41 chars with trip name + brand; OG image correct dimensions (1200×630)
+- Deficits (6): No H1, no canonical, meta desc 737 chars, og:url missing, og:type wrong, no breadcrumb
+- base = 2/8 × 100 = 25
+- Criticals: No H1 (−15), 737-char meta desc (−15) = −30 → max(0, 25−30) = 0; adjusted with positives: **~18**
 
 **Title Tag Analysis:**
-- `"Zo Trips | Adventure Travel Experiences & Trips | Zostel"` — 55 characters. Within Google's ~60 char truncation limit. Primary keyword "Zo Trips" is first. Brand at end. ✅
-- Minor issue: "Trips" appears twice ("Zo Trips" + "& Trips"). Consider: `"Zo Trips | Curated Adventure Travel by Zostel"` (48 chars).
+- `"Bali 7N/8D - Experience Bali | Zostel"` — 41 characters. Within limit. ✅
+- "Bali" appears twice — could be consolidated: `"Experience Bali 7N/8D — Ubud, Gili & Nusa Penida | Zostel"` (59 chars) adds destination specificity for long-tail queries.
 
-**Meta Description Analysis:**
-- Current (213 chars): `"Embark on Zo Trips - curated adventure travel experiences and unforgettable tours. Discover thrilling journeys, cultural explorations, and extraordinary adventures designed for the modern traveler."`
-- Will be truncated at ~155 chars in SERPs. Last ~58 characters ("designed for the modern traveler") will be cut.
-- Recommended (142 chars): `"Book curated adventure trips with Zostel — treks, cultural tours & international experiences across India and beyond. Guaranteed best prices."`
+**Meta Description — Current vs. Recommended:**
+
+Current (737 chars — 4.7× over limit, truncated at ~155 in SERPs to):
+> *"Get ready for the perfect Bali trip that blends island adventure, cultural depth, and beachside chill."*
+
+Recommended (148 chars):
+> *"Explore Bali in 7N/8D with Zostel — Ubud temples, Gili snorkelling, Nusa Penida cliffs & Kuta beaches. From ₹41,722. Solo & group-friendly. Book now."*
+
+This version:
+- Stays within 155 chars ✅
+- Contains primary keyword "Bali" twice naturally
+- Names 4 destinations (higher relevance signal)
+- Includes price anchor (reduces bounce from price-shocked users)
+- Has clear CTA ("Book now")
+- Targets both "solo trips to Bali" and "group" intents
 
 ---
 
 ### 4. Schema / Structured Data
 
-**Score: 0/100**
+**Score: 12/100**
 
 *Chain-of-thought:*
-- Positives (0): None — no schema of any type present
-- Deficits (5): No TouristTrip/ItemList per trip, no WebSite schema, no BreadcrumbList, no Organization, no Event schema for experiences like concerts/GPs
-- base = 0/5 × 100 = 0
-- Final = **0**
+- Positives (1): Schema block does exist in the JS/RSC payload (better than nothing; Googlebot may parse it)
+- Deficits (5): Not in static `<head>` (invisible to AI crawlers), invalid `duration` format, `provider` as string, missing `offers`/`price`/`startDate`, missing `aggregateRating`
+- base = 1/6 × 100 = 16.7
+- Criticals: Schema not in `<head>` (−15) → max(0, 16.7−15) = **~12**
 
-> "Score of 0 — zero structured data on the page. No eligible rich results. No schema signals for AI-generated answers."
+> "Score of 12 — schema exists in JavaScript payload but is invisible to AI crawlers; contains property errors that would fail Rich Results Test."
 
-**Recommended Schema (priority order):**
-
-**1. WebSite (sitelinks search box)**
+**Current schema (from RSC payload via WebFetch):**
 ```json
 {
   "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": "Zostel",
-  "url": "https://www.zostel.com",
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "https://www.zostel.com/search?q={search_term_string}",
-    "query-input": "required name=search_term_string"
-  }
+  "@type": "Trip",
+  "name": "Experience Bali",
+  "description": "Get ready for the perfect Bali trip...",
+  "image": "https://proxy.cdn.zo.xyz/gallery/media/images/b0af6c38-...",
+  "url": "https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/",
+  "duration": "P8",
+  "provider": "Zostel"
 }
 ```
 
-**2. BreadcrumbList**
-```json
-{
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.zostel.com/"},
-    {"@type": "ListItem", "position": 2, "name": "Zo Trips", "item": "https://www.zostel.com/zo-trips"}
-  ]
-}
-```
+**Issues with current schema:**
 
-**3. ItemList of Trips**
+| Property | Current Value | Problem | Fix |
+|----------|--------------|---------|-----|
+| `@type` | `"Trip"` | Overly generic. `TouristTrip` is the more specific recommended type | Use `"TouristTrip"` |
+| `duration` | `"P8"` | Invalid ISO 8601 — missing unit designator | `"P8D"` (8 days) |
+| `provider` | `"Zostel"` | Must be an object, not a string | `{"@type": "Organization", "name": "Zostel", "url": "https://www.zostel.com"}` |
+| `offers` | Missing | Price and availability are key for travel rich results | Add `Offer` with price, currency, availability, validFrom |
+| `itinerary` | Missing (referenced in payload but absent from schema block) | Itinerary is a key `TouristTrip` signal | Add `ItemList` itinerary |
+| `startDate` | Missing | Required for batch-specific pages | Add ISO 8601 date: `"2026-04-02"` |
+| `aggregateRating` | Missing | Strong CTR and trust signal in SERPs | Add if reviews exist |
+| `touristType` | Missing | Helps AI classify the audience | `["Adventure", "Cultural"]` |
+
+**Recommended complete schema:**
+
 ```json
-{
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  "name": "Zo Trips — Curated Adventure Travel",
-  "description": "Curated adventure travel experiences by Zostel",
-  "url": "https://www.zostel.com/zo-trips",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "item": {
-        "@type": "TouristTrip",
-        "name": "Experience Scorpions Live in Meghalaya",
-        "description": "7-day trip to experience the Scorpions concert in Meghalaya",
-        "touristType": "Adventure",
-        "provider": {
-          "@type": "Organization",
-          "name": "Zo Trips by Zostel",
-          "url": "https://www.zostel.com/zo-trips"
-        }
-      }
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "TouristTrip",
+    "name": "Experience Bali — 7 Nights 8 Days",
+    "description": "Explore Bali across Ubud, Gili Trawangan, Nusa Penida, and Kuta. 8-day adventure with temples, waterfalls, snorkelling, and Kecak dance.",
+    "image": "https://proxy.cdn.zo.xyz/gallery/media/images/b0af6c38-fc7f-46fd-995c-00c9fe31b059_20250417135249.png",
+    "url": "https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/",
+    "duration": "P8D",
+    "touristType": ["Adventure", "Cultural", "Group"],
+    "itinerary": {
+      "@type": "ItemList",
+      "numberOfItems": 8,
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Arrival in Bali — Transfer to Ubud"},
+        {"@type": "ListItem", "position": 2, "name": "Ubud Adventures — ATV & Jungle Swing"},
+        {"@type": "ListItem", "position": 3, "name": "Bali to Gili Trawangan transfer"},
+        {"@type": "ListItem", "position": 4, "name": "Gili Island leisure day"},
+        {"@type": "ListItem", "position": 5, "name": "Gili to Nusa Penida — Diamond Beach"},
+        {"@type": "ListItem", "position": 6, "name": "Nusa Penida exploration — transfer to Kuta"},
+        {"@type": "ListItem", "position": 7, "name": "Uluwatu Temple & Kecak Dance"},
+        {"@type": "ListItem", "position": 8, "name": "Departure"}
+      ]
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "41722.18",
+      "priceCurrency": "INR",
+      "availability": "https://schema.org/InStock",
+      "validFrom": "2026-01-01",
+      "url": "https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/"
+    },
+    "provider": {
+      "@type": "Organization",
+      "name": "Zostel",
+      "url": "https://www.zostel.com"
     }
-  ]
-}
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.zostel.com/"},
+      {"@type": "ListItem", "position": 2, "name": "Zo Trips", "item": "https://www.zostel.com/zo-trips"},
+      {"@type": "ListItem", "position": 3, "name": "Experience Bali", "item": "https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/"}
+    ]
+  }
+]
 ```
 
-**4. Organization**
-```json
-{
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "name": "Zostel",
-  "url": "https://www.zostel.com",
-  "logo": "https://proxy.cdn.zo.xyz/zo-media/brands/zostel-head-light.svg",
-  "sameAs": [
-    "https://www.instagram.com/zostel/",
-    "https://www.facebook.com/Zostel/",
-    "https://twitter.com/zostelhostel",
-    "https://www.youtube.com/ZostelHostels",
-    "https://in.linkedin.com/company/zostel"
-  ]
-}
-```
+Validate at: https://search.google.com/test/rich-results
 
 ---
 
@@ -235,130 +283,87 @@
 
 **Score: N/A — Hypothesis only**
 
-> PageSpeed Insights API returned HTTP 403 in this environment. The following analysis is hypothesis-based on observed page characteristics.
-
-**Hypothesised issues (Likely):**
-- **LCP risk**: The page is a React SPA with lazy-loaded images and no `<link rel="preload">` for the hero/LCP element. Brand logo images use `loading="lazy"` which can delay the LCP element.
-- **CLS risk (High confidence)**: All content images are missing `width` and `height` attributes, confirmed by `parse_html.py`. Images without explicit dimensions cause layout shifts as they load.
-- **INP risk**: React SPA with client-side rendering of all trip content likely results in large JavaScript bundles executing on the main thread, potentially causing long tasks > 50ms.
-
-**Manual verification steps:**
-1. Run PageSpeed Insights: https://pagespeed.web.dev/analysis/https-www-zostel-com-zo-trips
-2. Check CrUX field data in Google Search Console → Core Web Vitals report
-3. Use Chrome DevTools Performance panel to identify long tasks and layout shifts
+Same platform as `/zo-trips` — all hypotheses from the previous audit apply. Additional risk on this page:
+- **LCP**: The trip hero image (`b0af6c38-fc7f-46fd...png`, 1200×630) is a primary LCP candidate. No `fetchpriority="high"` or `<link rel="preload">` observed in server HTML.
+- **CLS**: All 24 images missing `width`/`height`. A trip page with 8+ day images loading without reserved dimensions is a high CLS risk.
+- **INP**: Next.js App Router with RSC streaming is generally good for INP, but third-party scripts (Razorpay, MoEngage SDK, Facebook Pixel, GTM) observed in HTML may add main-thread contention.
 
 ---
 
-### 6. Image Optimisation
+### 6. Links
 
-**Score: 40/100**
-
-*Chain-of-thought:*
-- Positives (2): Images served via CDN (proxy.cdn.zo.xyz), OG image has correct 1200×630 dimensions
-- Deficits (3): All `<img>` tags missing width/height (CLS), alt texts are generic filename stems, no `fetchpriority="high"` on LCP image
-- base = 2/5 × 100 = 40
-- No Critical findings specific to images (CLS is a performance-level Critical)
-- Warnings: generic alt text (−5) = **~40**
-
-**Observations:**
-- 24 images parsed. All brand/logo images use `loading="lazy"` — including the above-the-fold logo. The above-the-fold logo should use `loading="eager"` or have no loading attribute.
-- Two Facebook tracker pixels (`1×1` images) lack `alt=""`. Should be `alt=""` as they are decorative/invisible.
-- All SVG images served with `?w=120&h=120` or `?w=240&h=240` query params for sizing, but no corresponding HTML `width`/`height` attributes.
-- Alt texts like "zostel-head", "zo-trips-small", "follow-your", "zo-zo-zo" are not descriptive; "follow-your" is particularly uninformative (the graphic likely says "Follow Your Instinct").
-
----
-
-### 7. Links
-
-**External Links (Social):**
-- Instagram, Facebook, Twitter return HTTP 403. These are platform-side bot-blocking (confirmed behaviour for automated crawlers), not broken links. Functionally valid for human users.
-- All social links are missing `rel="noopener noreferrer"`. This is a security best practice for external links opening in new tabs.
-- No `rel="nofollow"` or `rel="sponsored"` issues detected.
+**External Links:**
+- Social links (Instagram, Facebook, Twitter): 403 (platform bot-blocking, not truly broken). Add `rel="noopener noreferrer"`.
+- Razorpay and MoEngage SDK: third-party scripts loaded. Check if they can be deferred.
 
 **Internal Links:**
-- 253 destination pages have ≤1 internal link pointing to them (near-orphan status). At scale, this severely limits Google's ability to discover, crawl, and assign PageRank to these pages.
-- 17 anchor tags have empty text (logo links, image links in nav). These pass no anchor text signal.
-- Anchor text is highly repetitive across all 17 crawled pages (nav emojis: "📱Get the App", "🗺️Destinations" etc.) — these contribute minimal topical signal.
-- Merchandise link has a 2-hop 308 redirect chain (`/merchandise` → `/merchandise/tshirts`). Update the link to point directly to the final URL.
+- No link back to `/zo-trips` parent page in server-rendered HTML (nav has "Zo Trips" link, which helps).
+- No breadcrumb navigation rendered server-side.
+- Merchandise link still has 2-hop redirect chain (same as parent domain issue).
+- No cross-sell links to related trips (e.g. "Also explore: Sri Lanka, Singapore GP, Japan").
 
 ---
 
-### 8. GEO (Generative Engine Optimisation / AI Search)
+### 7. GEO / AEO
 
-**Score: 10/100**
+**Score: 10/100** (inherited from root domain — no change)
 
-*Chain-of-thought:*
-- Positives (1): Site is accessible to AI crawlers (robots.txt allows all)
-- Deficits (4): No llms.txt, no explicit AI crawler policy, no structured data for AI parsing, no on-page Q&A content for AI extraction
-- base = 1/5 × 100 = 20
-- Critical: No llms.txt (−15) → max(0, 20−15) = **~10**
-
-**Key GEO Findings:**
-- **No llms.txt**: This file (at `zostel.com/llms.txt`) signals to AI systems which content is most important and how to attribute it. Travel is a highly competitive AI Overview category.
-- **11 AI crawlers unmanaged**: GPTBot, ClaudeBot, PerplexityBot, Google-Extended, Applebot-Extended, Bytespider, CCBot, ChatGPT-User, anthropic-ai, FacebookBot, Amazonbot all inherit wildcard `*` rules without explicit policy. This is not a block — all can crawl — but the absence of explicit policy is poor AI citation hygiene.
-- **Zero structured data**: Schema.org content with proper schema has ~2.5× higher probability of appearing in AI-generated answers (Google/Microsoft, March 2025). Zo Trips has none.
-- **SPA rendering**: AI crawlers (unlike Googlebot) typically do not execute JavaScript. The 23-word server-side HTML is what most AI indexers see. This critically limits AI citation potential.
+**Key AEO observations for this trip page:**
+- No "What's included?" / "What's not included?" content in server-side HTML — these are prime Featured Snippet candidates for queries like "bali trip package inclusions"
+- No FAQ section covering: visa requirements for Bali from India, best time to visit, group size, physical difficulty, cancellation policy
+- No review schema or star rating — significantly reduces CTR for competitive Bali travel queries
+- The trip description (currently in meta description only) contains 4 strong long-tail keyword phrases: "solo trips to Bali", "group getaways", "Bali vacation packages", "best of Bali in just one week" — these should be on-page headings or copy
+- No `speakable` schema for voice search optimisation
 
 ---
 
-### 9. AEO (Answer Engine Optimisation)
+### 8. Sitemap
 
-**Key AEO Findings:**
-- No Featured Snippet-optimised content: No clear definition of "What is Zo Trips?", no numbered itinerary lists, no "best adventure trips in India" comparison content visible in server-side HTML.
-- No FAQ content (plain text) addressing common traveller questions (visa requirements, difficulty level, group size, refund policy, etc.)
-- No `speakable` schema for voice search.
-- No Knowledge Panel anchor signals (no `sameAs` links in Organization schema).
+**Status: No sitemap (inherited from root domain)**
 
-> Note: FAQPage schema is restricted to government and healthcare authority sites only (August 2023). Do NOT implement FAQPage schema for Zostel. Use plain-text FAQ sections for snippet optimisation instead.
-
----
-
-### 10. Sitemap Analysis
-
-**Score: 0/100 (Confirmed: No sitemap)**
-
-| Location Checked | Status |
-|-----------------|--------|
-| /sitemap.xml | 404 |
-| /sitemap_index.xml | 404 |
-| /sitemaps/sitemap.xml | 404 |
-| robots.txt Sitemap: directive | Absent |
-
-The absence of a sitemap is a critical crawl budget issue for a site with 270+ discovered URLs. Google will rely entirely on link discovery, which is highly inefficient for a site with 253 near-orphan destination pages.
-
-**Recommended sitemap strategy:**
-- Create a sitemap index at `/sitemap.xml`
-- Sub-sitemaps: `/sitemap-destinations.xml`, `/sitemap-trips.xml`, `/sitemap-static.xml`
-- Include `<lastmod>` for all pages
-- Submit to Google Search Console
-- Add `Sitemap: https://www.zostel.com/sitemap.xml` to robots.txt
+This trip URL at its canonical form (`/zo-trip/experience-bali-tr-j5xx3p9f/`) should be included in a `/sitemap-trips.xml` sub-sitemap with:
+- `<loc>https://www.zostel.com/zo-trip/experience-bali-tr-j5xx3p9f/</loc>` (canonical, no batch param)
+- `<lastmod>` reflecting most recent trip update
+- `<changefreq>weekly</changefreq>` (prices and availability change)
 
 ---
 
-## D) Unknowns and Follow-ups
+## D) Comparison with /zo-trips Listing Page
 
-The following checks require additional tools or access to move from `Hypothesis`/`Likely` to `Confirmed`:
-
-| Item | Current Confidence | How to Confirm |
-|------|--------------------|----------------|
-| Core Web Vitals (LCP, INP, CLS) | Hypothesis | Run PageSpeed Insights manually; check GSC Core Web Vitals report |
-| JS rendering depth | Likely | Use Screaming Frog with JavaScript rendering enabled to compare crawled vs. rendered content |
-| Backlink profile | Unknown | Use Ahrefs, SEMrush, or Google Search Console Links report |
-| Google index status | Unknown | Run `site:zostel.com/zo-trips` in Google; check GSC Coverage report |
-| CrUX origin data | Unknown | Query CrUX API or use CrUX Vis (https://cruxvis.withgoogle.com) |
-| Rendered page word count | Likely (400+) | Use Screaming Frog or Puppeteer to render JS and extract DOM |
-| International intent | Hypothesis | Check GSC geo report; determine if hreflang is needed |
-| Trip-level page SEO | Unknown | Run individual audits on `/zo-trips/[trip-slug]` pages |
-
----
-
-## E) Environment Limitations
-
-- **PageSpeed Insights API**: Returned HTTP 403. CWV scores are Hypothesis only.
-- **Social link 403s**: Instagram, Facebook, Twitter block automated crawlers — reported as "broken" by broken_links.py but are functionally valid for users.
-- **Backlink data**: No backlink API available. Link profile analysis is incomplete.
-- **Rendered content**: Scores based on server-side HTML (23 words). Actual browser-rendered content is richer (~400–600 words estimated) but was partially captured via WebFetch.
+| Issue | /zo-trips | This trip page | Delta |
+|-------|-----------|---------------|-------|
+| H1 | Missing | Missing | Same |
+| Canonical | Missing | Missing + batch URL problem | Worse |
+| Schema | None | Present but JS-only + errors | Slightly better but still critical |
+| Meta description length | 213 chars | 737 chars | Much worse |
+| og:url | Missing | Missing | Same |
+| og:type | `website` | `article` (wrong) | New issue |
+| Content (server HTML) | 23 words | 14 words | Worse |
+| Sitemap | None | None | Same |
+| Security headers | 50/100 | 50/100 | Same |
+| URL architecture | Clean | `?batch=` duplication | New critical |
 
 ---
 
-*Audit produced by Agentic SEO Skill v1 | Zostel.com/zo-trips | 2026-03-15*
+## E) Unknowns and Follow-ups
+
+| Item | Confidence | How to Confirm |
+|------|------------|----------------|
+| Total number of `?batch=` URL variants per trip | Unknown | Check product database; test additional batch codes |
+| Whether Googlebot renders RSC payload schema correctly | Hypothesis | Use Google's URL Inspection tool in GSC on this URL |
+| CWV field data | Hypothesis | PageSpeed Insights + GSC Core Web Vitals report |
+| Whether trip-level pages are currently indexed | Unknown | `site:zostel.com/zo-trip/experience-bali` in Google |
+| Whether `?batch=` URLs are already in Google's index | Unknown | GSC Coverage report filtered to `/zo-trip/` prefix |
+| Number of total trip pages across Zo Trips | Unknown | Check sitemap or crawl with Screaming Frog |
+
+---
+
+## F) Environment Limitations
+
+- **PageSpeed Insights API**: HTTP 403. CWV is Hypothesis only.
+- **Social links 403**: Platform bot-blocking, not genuine broken links.
+- **RSC payload schema**: Confirmed present via WebFetch (browser rendering) but absent in static HTML — confidence Confirmed for "schema in JS" finding.
+
+---
+
+*Audit produced by Agentic SEO Skill v1 | zostel.com/zo-trip/experience-bali | 2026-03-15*
